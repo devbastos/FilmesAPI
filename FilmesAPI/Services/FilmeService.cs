@@ -16,6 +16,15 @@ public sealed class FilmeService(FilmeContext db) : IFilmeService
     public async Task<IReadOnlyList<ReadFilmeDto>> ListarAsync(CancellationToken ct) =>
         (await db.Filmes.AsNoTracking().OrderBy(f => f.Id).ToListAsync(ct)).Select(Map).ToList();
 
+    public async Task<PagedResult<ReadFilmeDto>> ListarPaginadoAsync(int page, int pageSize, CancellationToken ct)
+    {
+        var query = db.Filmes.AsNoTracking();
+        var total = await query.CountAsync(ct);
+        var filmes = await query.OrderBy(f => f.Id)
+            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
+        return new PagedResult<ReadFilmeDto>(filmes.Select(Map).ToList(), page, pageSize, total);
+    }
+
     public async Task<ReadFilmeDto?> ObterAsync(int id, CancellationToken ct)
     {
         var filme = await db.Filmes.AsNoTracking().FirstOrDefaultAsync(f => f.Id == id, ct);

@@ -35,6 +35,9 @@ services:
     build: .
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      Jwt__Key: "${JWT_KEY:?Defina JWT_KEY no arquivo .env}"
+      Jwt__Issuer: "FilmesAPI"
+      Jwt__Audience: "FilmesAPI.Client"
       ConnectionStrings__FilmeConnection: "server=mysql;port=3306;database=filmesdb;user=filmes;password=${MYSQL_PASSWORD:-filmes_local_dev}"
     ports:
       - "8080:8080"

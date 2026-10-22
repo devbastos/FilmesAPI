@@ -11,6 +11,8 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.10" />
     <PackageReference Include="Testcontainers.MySql" Version="4.4.0" />
+    <PackageReference Include="SSH.NET" Version="2026.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.10" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../FilmesAPI/FilmesAPI.csproj" />

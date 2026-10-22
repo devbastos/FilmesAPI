@@ -1,46 +1,52 @@
-# FilmesAPI — .NET 10
+# FilmesAPI — API REST .NET 10
 
-API REST de filmes com ASP.NET Core, Entity Framework Core, MySQL (Pomelo), serviços, DTOs e operações assíncronas.
+[![CI](https://github.com/devbastos/FilmesAPI/actions/workflows/ci.yml/badge.svg)](https://github.com/devbastos/FilmesAPI/actions/workflows/ci.yml)
+[![MySQL integration](https://github.com/devbastos/FilmesAPI/actions/workflows/mysql-integration.yml/badge.svg)](https://github.com/devbastos/FilmesAPI/actions/workflows/mysql-integration.yml)
+[![Build](https://github.com/devbastos/FilmesAPI/actions/workflows/build.yml/badge.svg)](https://github.com/devbastos/FilmesAPI/actions/workflows/build.yml)
+
+Projeto de portfólio com ASP.NET Core 10, EF Core, MySQL, Docker Compose, JWT, paginação, observabilidade e testes de integração reais.
 
 ## Arquitetura
 
-- **Controller:** HTTP e status codes.
-- **Service:** operações de aplicação e mapeamento para DTOs.
-- **DbContext:** persistência EF Core com MySQL.
-- **Tests:** testes de comportamento com EF InMemory (não substituem testes de integração MySQL).
+Veja [diagrama e decisões técnicas](docs/ARCHITECTURE.md).
 
-## Rotas
-
-| Método | Rota | Ação |
-|---|---|---|
-| GET | /api/filmes | Listar |
-| GET | /api/filmes/{id} | Consultar |
-| POST | /api/filmes | Criar |
-| PUT | /api/filmes/{id} | Atualizar |
-| DELETE | /api/filmes/{id} | Excluir |
-
-Exemplo POST:
-```json
-{"titulo":"Interestelar","diretor":"Christopher Nolan","genero":"Ficção científica","duracao":169}
-```
-
-## Executar
-
-Requer .NET SDK 10 e MySQL. Configure a connection string fora do código:
-```bash
-export ConnectionStrings__FilmeConnection='server=localhost;database=filmeDb;user=app;password=SUA_SENHA'
-dotnet restore FilmesAPI.sln
-dotnet run --project FilmesAPI/FilmesAPI.csproj
-```
-
-### Banco de dados e migrações
-
-A migração inicial Pomelo desta versão foi criada para **bancos novos**. Se já existir banco criado com as migrações do provider anterior, **não execute a migração diretamente em produção**. Faça backup e planeje a reconciliação do histórico `__EFMigrationsHistory` e do esquema antes de aplicar.
+## Executar com Docker
 
 ```bash
-dotnet tool install --global dotnet-ef --version 9.0.10
-dotnet ef database update --project FilmesAPI/FilmesAPI.csproj
+cp .env.example .env
+# Defina MYSQL_PASSWORD e JWT_KEY com valores fortes no .env
+docker compose up -d mysql
+docker compose --profile setup run --rm migrate
+docker compose --profile app up -d --build api
 ```
+
+Swagger: http://localhost:8080/swagger — Health check: http://localhost:8080/health.
+
+## Endpoints
+
+| Método | Rota | Autenticação | Resultado |
+|---|---|---|---|
+| GET | /api/filmes?page=1&pageSize=20 | Pública | `items, page, pageSize, totalItems, totalPages` |
+| GET | /api/filmes/{id} | Pública | Filme ou 404 |
+| POST | /api/filmes | Bearer JWT | 201 + filme |
+| PUT | /api/filmes/{id} | Bearer JWT | 204 ou 404 |
+| DELETE | /api/filmes/{id} | Bearer JWT | 204 ou 404 |
+| GET | /health | Pública | Saúde da aplicação/banco |
+
+Exemplo de leitura:
+```bash
+curl "http://localhost:8080/api/filmes?page=1&pageSize=10"
+```
+
+Exemplo de escrita com **token emitido externamente**:
+```bash
+curl -X POST "http://localhost:8080/api/filmes" \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"titulo":"Interestelar","diretor":"Christopher Nolan","genero":"Ficção científica","duracao":169}'
+```
+
+A API **não emite tokens**. Valida assinatura HMAC, issuer, audience e expiração. Configure `Jwt__Key` (mínimo 32 bytes), `Jwt__Issuer` e `Jwt__Audience` no ambiente. Nunca comite chaves reais.
 
 ## Testes
 
@@ -48,16 +54,12 @@ dotnet ef database update --project FilmesAPI/FilmesAPI.csproj
 dotnet test FilmesAPI.Tests/FilmesAPI.Tests.csproj
 ```
 
-## Docker
+Testes MySQL usam Testcontainers e exigem Docker em execução. GitHub Actions executa build, testes unitários e integração.
 
-```bash
-docker build -t filmes-api .
-docker run -p 8080:8080 -e ConnectionStrings__FilmeConnection='server=host.docker.internal;database=filmeDb;user=app;password=SUA_SENHA' filmes-api
-```
+## Observabilidade
 
-## Segurança e limitações
+Logs estruturados com duração, método, caminho e status HTTP; cabeçalho `X-Correlation-ID` para rastrear requisições e health check em `/health`.
 
-- Nunca inclua credenciais reais no repositório. Uma credencial existia no histórico anterior; faça rotação se ainda estiver válida.
-- Migração para .NET 10 e provedor Pomelo precisa de validação de build, testes e banco real antes de merge.
-- A rota antiga `/Filme` foi substituída por `/api/filmes`.
-- O projeto demonstra separação básica Controller/Service/Persistência, não uma implementação completa de DDD ou microserviços.
+## Segurança e evolução
+
+Este é um projeto de estudo e portfólio, não uma plataforma de identidade. Para produção: OIDC/JWKS, autorização por escopo, métricas e traces OpenTelemetry, rate limiting e gestão segura de segredos. As migrations iniciais destinam-se a **banco novo**; não execute diretamente sobre banco legado.

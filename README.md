@@ -1,52 +1,63 @@
-# FilmesAPI
+# FilmesAPI — .NET 10
 
-API REST para gerenciamento de filmes, desenvolvida com ASP.NET Core, Entity Framework Core, MySQL e AutoMapper.
+API REST de filmes com ASP.NET Core, Entity Framework Core, MySQL (Pomelo), serviços, DTOs e operações assíncronas.
 
-> **Estado do projeto:** refatoração incremental. O projeto original utiliza .NET 5, que está fora de suporte. A migração para uma versão atual do .NET e a inclusão de testes automatizados estão planejadas; ainda não foram concluídas.
+## Arquitetura
 
-## Endpoints
+- **Controller:** HTTP e status codes.
+- **Service:** operações de aplicação e mapeamento para DTOs.
+- **DbContext:** persistência EF Core com MySQL.
+- **Tests:** testes de comportamento com EF InMemory (não substituem testes de integração MySQL).
 
-| Método | Rota | Descrição |
+## Rotas
+
+| Método | Rota | Ação |
 |---|---|---|
-| GET | `/api/filmes` | Lista filmes |
-| GET | `/api/filmes/{id}` | Consulta por ID |
-| POST | `/api/filmes` | Cadastra filme |
-| PUT | `/api/filmes/{id}` | Atualiza filme |
-| DELETE | `/api/filmes/{id}` | Remove filme |
+| GET | /api/filmes | Listar |
+| GET | /api/filmes/{id} | Consultar |
+| POST | /api/filmes | Criar |
+| PUT | /api/filmes/{id} | Atualizar |
+| DELETE | /api/filmes/{id} | Excluir |
 
-Exemplo de corpo para POST/PUT:
-
+Exemplo POST:
 ```json
-{
-  "titulo": "Interestelar",
-  "diretor": "Christopher Nolan",
-  "genero": "Ficção científica",
-  "duracao": 169
-}
+{"titulo":"Interestelar","diretor":"Christopher Nolan","genero":"Ficção científica","duracao":169}
 ```
 
-## Melhorias desta branch
+## Executar
 
-- Operações de banco assíncronas com suporte a `CancellationToken`.
-- `AsNoTracking()` para consultas somente leitura.
-- DTOs nas respostas em vez de expor diretamente as entidades.
-- Campos de dependência somente leitura.
-- Rotas explícitas sob `/api/filmes`.
+Requer .NET SDK 10 e MySQL. Configure a connection string fora do código:
+```bash
+export ConnectionStrings__FilmeConnection='server=localhost;database=filmeDb;user=app;password=SUA_SENHA'
+dotnet restore FilmesAPI.sln
+dotnet run --project FilmesAPI/FilmesAPI.csproj
+```
 
-**Atenção:** a mudança de rota de `/Filme` para `/api/filmes` altera o contrato HTTP anterior. Clientes existentes precisarão ser ajustados.
+### Banco de dados e migrações
 
-## Execução local
+A migração inicial Pomelo desta versão foi criada para **bancos novos**. Se já existir banco criado com as migrações do provider anterior, **não execute a migração diretamente em produção**. Faça backup e planeje a reconciliação do histórico `__EFMigrationsHistory` e do esquema antes de aplicar.
 
-1. Instale o SDK do .NET 5 (legado) e disponibilize uma instância MySQL compatível.
-2. Configure a connection string `FilmeConnection` por variáveis de ambiente ou user secrets, evitando credenciais no repositório.
-3. Execute `dotnet restore` e `dotnet run --project FilmesAPI/FilmesAPI.csproj`.
+```bash
+dotnet tool install --global dotnet-ef --version 9.0.10
+dotnet ef database update --project FilmesAPI/FilmesAPI.csproj
+```
 
-A configuração de migrações e compatibilidade de dependências precisa ser validada no ambiente local.
+## Testes
 
-## Próximos passos
+```bash
+dotnet test FilmesAPI.Tests/FilmesAPI.Tests.csproj
+```
 
-- Migrar para .NET 10 e atualizar pacotes.
-- Adicionar testes unitários e de integração.
-- Extrair regras de negócio e acesso a dados do controller conforme a complexidade evoluir.
-- Configurar CI para build e testes.
-- Documentar decisões arquiteturais.
+## Docker
+
+```bash
+docker build -t filmes-api .
+docker run -p 8080:8080 -e ConnectionStrings__FilmeConnection='server=host.docker.internal;database=filmeDb;user=app;password=SUA_SENHA' filmes-api
+```
+
+## Segurança e limitações
+
+- Nunca inclua credenciais reais no repositório. Uma credencial existia no histórico anterior; faça rotação se ainda estiver válida.
+- Migração para .NET 10 e provedor Pomelo precisa de validação de build, testes e banco real antes de merge.
+- A rota antiga `/Filme` foi substituída por `/api/filmes`.
+- O projeto demonstra separação básica Controller/Service/Persistência, não uma implementação completa de DDD ou microserviços.

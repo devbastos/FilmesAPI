@@ -2,15 +2,15 @@
 
 ```mermaid
 flowchart TD
-  Client[Cliente HTTP / Swagger] --> Middleware[Correlation ID + logging]
-  Middleware --> Auth[JWT authentication / authorization]
+  Client["Cliente HTTP / Swagger"] --> Middleware["Correlation ID + logging"]
+  Middleware --> Auth["JWT authentication / authorization"]
   Auth --> Controller[FilmeController]
   Controller --> Service[IFilmeService / FilmeService]
-  Service --> EF[EF Core / FilmeContext]
-  EF --> DB[(MySQL 8.4)]
-  Health[/health] --> DB
-  CI[GitHub Actions] --> Tests[xUnit + Testcontainers]
-  Tests --> DB2[(MySQL efêmero)]
+  Service --> EF["EF Core / FilmeContext"]
+  EF --> DB[("MySQL 8.4")]
+  Health["Health check /health"] --> DB
+  CI["GitHub Actions"] --> Tests["xUnit + Testcontainers"]
+  Tests --> DB2[("MySQL efêmero")]
 ```
 
 ## Decisões

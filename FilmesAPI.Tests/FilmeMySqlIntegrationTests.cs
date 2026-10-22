@@ -9,7 +9,7 @@ namespace FilmesAPI.Tests;
 
 public sealed class FilmeMySqlIntegrationTests : IAsyncLifetime
 {
-    private readonly MySqlContainer _mysql = new MySqlBuilder("mysql:8.4")
+    private readonly MySqlContainer _mysql = new MySqlBuilder().WithImage("mysql:8.4")
         .WithDatabase("filmes_integration")
         .WithUsername("filmes")
         .WithPassword("filmes_test_only")

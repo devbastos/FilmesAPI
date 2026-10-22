@@ -39,7 +39,10 @@ Exemplo de corpo para POST/PUT:
 
 1. Instale o SDK do .NET 5 (legado) e disponibilize uma instância MySQL compatível.
 2. Configure a connection string `FilmeConnection` por variáveis de ambiente ou user secrets, evitando credenciais no repositório.
-3. Execute `dotnet restore` e `dotnet run --project FilmesAPI/FilmesAPI.csproj`.
+3. Configure `ConnectionStrings__FilmeConnection` com a string de conexão MySQL no ambiente (ou use `dotnet user-secrets`).
+4. Execute `dotnet restore` e `dotnet run --project FilmesAPI/FilmesAPI.csproj`.
+
+> **Segurança:** o histórico original do repositório contém uma credencial de desenvolvimento. Se ela ainda estiver ativa, revogue-a ou faça a rotação. A remoção do `appsettings.json` atual não apaga o histórico Git.
 
 A configuração de migrações e compatibilidade de dependências precisa ser validada no ambiente local.
 

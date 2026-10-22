@@ -1,20 +1,22 @@
-﻿using AutoMapper;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using AutoMapper;
 using FilmesAPI.Data;
 using FilmesAPI.Data.DTO;
 using FilmesAPI.Models;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace FilmesAPI.Controllers
 {
     [ApiController]
-    [Route("[Controller]")]
+    [Route("api/filmes")]
     public class FilmeController : ControllerBase
     {
-        private FilmeContext _context;
-        private IMapper _mapper;
+        private readonly FilmeContext _context;
+        private readonly IMapper _mapper;
 
         public FilmeController(FilmeContext context, IMapper mapper)
         {
@@ -22,61 +24,65 @@ namespace FilmesAPI.Controllers
             _mapper = mapper;
         }
 
-
         [HttpPost]
-        public IActionResult AdicionaFilme([FromBody] CreateFilmeDto filmeDto)
+        public async Task<ActionResult<ReadFilmeDto>> AdicionaFilme(
+            [FromBody] CreateFilmeDto filmeDto, CancellationToken cancellationToken)
         {
-            Filme filme = _mapper.Map<Filme>(filmeDto);
+            var filme = _mapper.Map<Filme>(filmeDto);
+            await _context.Filmes.AddAsync(filme, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
 
-            _context.Filmes.Add(filme);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(RecuperaFilmePorId), new { Id = filme.Id }, filme);
+            var resposta = _mapper.Map<ReadFilmeDto>(filme);
+            return CreatedAtAction(nameof(RecuperaFilmePorId), new { id = filme.Id }, resposta);
         }
 
         [HttpGet]
-        public IEnumerable<Filme> RecuperarFilmes()
+        public async Task<ActionResult<IEnumerable<ReadFilmeDto>>> RecuperarFilmes(
+            CancellationToken cancellationToken)
         {
-            return _context.Filmes;
+            var filmes = await _context.Filmes.AsNoTracking().ToListAsync(cancellationToken);
+            return Ok(_mapper.Map<IEnumerable<ReadFilmeDto>>(filmes));
         }
 
-        [HttpGet("{id}")]
-        public IActionResult RecuperaFilmePorId(int id)
+        [HttpGet("{id:int}")]
+        public async Task<ActionResult<ReadFilmeDto>> RecuperaFilmePorId(
+            int id, CancellationToken cancellationToken)
         {
-            Filme filme = _context.Filmes.FirstOrDefault(filme => filme.Id == id);
-            if (filme != null)
-            {
-                ReadFilmeDto filmeDto = _mapper.Map<ReadFilmeDto>(filme);
+            var filme = await _context.Filmes.AsNoTracking()
+                .FirstOrDefaultAsync(f => f.Id == id, cancellationToken);
 
-                return Ok(filme);
-            }
-            return NotFound();
-
-
-        }
-
-        [HttpPut("{id}")]
-        public IActionResult AtualizaFilme(int id, [FromBody] UpdateFilmeDto filmeDto)
-        {
-            Filme filme = _context.Filmes.FirstOrDefault(filme => filme.Id == id);
             if (filme == null)
-            {
                 return NotFound();
-            }
+
+            return Ok(_mapper.Map<ReadFilmeDto>(filme));
+        }
+
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> AtualizaFilme(
+            int id, [FromBody] UpdateFilmeDto filmeDto, CancellationToken cancellationToken)
+        {
+            var filme = await _context.Filmes
+                .FirstOrDefaultAsync(f => f.Id == id, cancellationToken);
+
+            if (filme == null)
+                return NotFound();
+
             _mapper.Map(filmeDto, filme);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync(cancellationToken);
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
-        public IActionResult DeletaFilme(int id)
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeletaFilme(int id, CancellationToken cancellationToken)
         {
-            Filme filme = _context.Filmes.FirstOrDefault(filme => filme.Id == id);
+            var filme = await _context.Filmes
+                .FirstOrDefaultAsync(f => f.Id == id, cancellationToken);
+
             if (filme == null)
-            {
                 return NotFound();
-            }
-            _context.Remove(filme);
-            _context.SaveChanges();
+
+            _context.Filmes.Remove(filme);
+            await _context.SaveChangesAsync(cancellationToken);
             return NoContent();
         }
     }
